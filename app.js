@@ -91,14 +91,15 @@ function intentUrl(kind, p, pkg) {
 // まず、サーバー経由で、いま開いているエクスプローラーの窓(携帯)に、指示を送る。窓の配置(分割・ポップアップ)に関係なく届く。届いた窓が無ければ、アプリを起動する
 async function openInExplorer(kind, p) {
   try {
-    const r = await api('POST', '/api/goto', { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: p, kind }) });
+    const r = await api('POST', '/api/goto', { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: p, kind, dev: isPhone() ? 'phone' : 'pc' }) });
     if (r.ok) { const j = await r.json().catch(() => null); if (j && j.delivered > 0) { toast(kind === 'dir' ? 'エクスプローラーで開きました' : 'エクスプローラーに送りました', 1500); return true; } }
   } catch {}
   return launchExplorerApp(kind, p);
 }
+const isPhone = () => (navigator.maxTouchPoints > 0) && /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent); // 携帯か(パソコンのブラウザは、インテントが使えない)
 function launchExplorerApp(kind, p) {
   const a = document.createElement('a');
-  if (PKG && PKG_RE.test(PKG)) a.href = intentUrl(kind, p, PKG);
+  if (isPhone() && PKG && PKG_RE.test(PKG)) a.href = intentUrl(kind, p, PKG);
   else { a.href = explorerUrl(kind, p); a.target = '_blank'; a.rel = 'noopener'; }
   document.body.appendChild(a); a.click(); a.remove();
   return true;
