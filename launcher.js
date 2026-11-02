@@ -70,6 +70,16 @@ const CSS = `
 .lau-head{display:flex;align-items:center;gap:5px;padding:6px 8px 4px 10px;flex:none;cursor:move;touch-action:none}
 .lau-card:not(.m-float) .lau-head{cursor:default}
 .lau-ver{font-weight:400;font-size:10.5px;color:#888;margin-left:4px}
+.lau-trash,.lau-sc,.lau-selx{display:none}
+.lau-sc{font-size:13px;color:#0067c0;font-weight:600;white-space:nowrap}
+.lau-card.selmode .lau-trash,.lau-card.selmode .lau-selx{display:inline-block}.lau-card.selmode .lau-sc{display:inline}
+.lau-card.selmode .lau-view,.lau-card.selmode .lau-lay,.lau-card.selmode .lau-rst,.lau-card.selmode .lau-more,.lau-card.selmode .lau-add{display:none}
+.lau-card.selmode .lau-title{flex:none;font-size:0}.lau-card.selmode .lau-title .lau-ver{display:none}
+.lau-card.selmode .lau-head{gap:8px}.lau-card.selmode .lau-sc{flex:1}
+.lau-tile .ck{display:none;position:absolute;left:4px;top:4px;width:22px;height:22px;border-radius:50%;border:2px solid #8a94a6;background:#fff;color:transparent;font-size:14px;line-height:18px;text-align:center;z-index:2}
+.lau-card.selmode .lau-tile .ck{display:block}
+.lau-tile.sel{background:#d8e8fb;border-color:#0067c0}.lau-tile.sel .ck{background:#0067c0;border-color:#0067c0;color:#fff}
+.lau-ghost .ck{display:none!important}.lau-gcnt{position:absolute;right:4px;top:4px;min-width:22px;height:22px;border-radius:11px;background:#0067c0;color:#fff;font-size:12px;line-height:22px;text-align:center;padding:0 5px}
 .lau-title{font-weight:600;flex:1;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lau-head button{height:34px;min-width:34px;padding:0 8px;border:1px solid #d0d0d0;border-radius:8px;background:#f6f6f6;font:inherit;cursor:pointer}
 .lau-card.m-fill .lau-lay,.lau-card.m-fill .lau-rst{display:none}
@@ -143,7 +153,7 @@ const nameOf = k => { const p = plain(k); return p === '/' ? (ctx.rootName || '�
 function build() {
   const st = h('style'); st.textContent = CSS; document.head.appendChild(st);
   el = h('div', { id: 'lau' }); el.hidden = true;
-  el.innerHTML = '<div class="lau-card"><div class="lau-head"><span class="lau-title">🚀 ランチャー<span class="lau-ver">' + (window.LAUNCHER_VER ? ' ' + window.LAUNCHER_VER : '') + '</span></span><button class="lau-add" title="フォルダー・ファイルを、このグループに追加する">＋</button><button class="lau-view" title="表示(タイルの大きさ・一覧)">▦</button><button class="lau-lay" title="配置(浮かせる・画面を分割・別ウィンドウ・固定)">◫</button><button class="lau-rst" title="初期の大きさ・位置に戻す">⟲</button><button class="lau-more" title="その他(お気に入りから取り込む など)">⋯</button><button class="lau-x" title="閉じる">✕</button></div>' +
+  el.innerHTML = '<div class="lau-card"><div class="lau-head"><span class="lau-title">🚀 ランチャー<span class="lau-ver">' + (window.LAUNCHER_VER ? ' ' + window.LAUNCHER_VER : '') + '</span></span><button class="lau-trash" title="選んだ登録を、ランチャーから削除する(ファイルは消えません)">🗑</button><span class="lau-sc"></span><button class="lau-selx" title="選択をやめる">選択解除</button><button class="lau-add" title="フォルダー・ファイルを、このグループに追加する">＋</button><button class="lau-view" title="表示(タイルの大きさ・一覧)">▦</button><button class="lau-lay" title="配置(浮かせる・画面を分割・別ウィンドウ・固定)">◫</button><button class="lau-rst" title="初期の大きさ・位置に戻す">⟲</button><button class="lau-more" title="その他(お気に入りから取り込む など)">⋯</button><button class="lau-x" title="閉じる">✕</button></div>' +
     '<div class="lau-tabs"></div><div class="lau-grid"></div>' +
     ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].map(d => '<div class="lau-rz" data-d="' + d + '"></div>').join('') + '</div>';
   document.body.appendChild(el);
@@ -151,6 +161,8 @@ function build() {
   const at = (e, f) => { const r = e.currentTarget.getBoundingClientRect(); f(r.left, r.bottom + 4); };
   el.querySelector('.lau-x').onclick = () => { if (STANDALONE) standaloneClose(); else close(); };
   el.querySelector('.lau-add').onclick = e => at(e, addMenu);
+  el.querySelector('.lau-trash').onclick = () => deleteSel();
+  el.querySelector('.lau-selx').onclick = () => setSel(false);
   el.querySelector('.lau-view').onclick = e => at(e, viewMenu);
   el.querySelector('.lau-lay').onclick = e => at(e, layMenu);
   el.querySelector('.lau-rst').onclick = () => resetLayout();
@@ -270,10 +282,11 @@ async function importFavs() {
 function render() {
   if (!el) return;
   const g = curGroup(); if (g) curGid = g.id;
+  for (const k of [...sel]) if (!g || !g.items.includes(k)) sel.delete(k); selMode = sel.size > 0; // 無くなった・別のグループのものは、選択から外す
   tabsEl.textContent = '';
   D.groups.forEach(x => {
     const b = h('button', { class: 'lau-tab' + (g && x.id === g.id ? ' on' : ''), 'data-gid': x.id, title: x.name }); b.textContent = x.name;
-    dragify(b, { kind: 'tab', id: x.id, tap: () => { curGid = x.id; lsSet('fb_laugid', x.id); render(); }, menu: (px, py) => tabMenu(x, px, py) });
+    dragify(b, { kind: 'tab', id: x.id, tap: () => { setSel(false); curGid = x.id; lsSet('fb_laugid', x.id); render(); }, menu: (px, py) => tabMenu(x, px, py) });
     tabsEl.appendChild(b);
   });
   const ad = h('button', { class: 'lau-tab add', title: '新しいグループを作る' }, '＋ グループ'); ad.onclick = () => newGroup(); tabsEl.appendChild(ad);
@@ -282,22 +295,23 @@ function render() {
   if (!g.items.length) gridEl.appendChild(h('div', { class: 'lau-empty' }, 'このグループには、まだ何も登録されていません。<br>右上の「＋ 追加」から、いま開いているフォルダーや、選んだファイルを登録できます。<br>(エクスプローラーで右クリック/長押し →「ランチャーに追加」でも登録できます)'));
   g.items.forEach(k => {
     const t = h('div', { class: 'lau-tile', 'data-k': k, title: ctx.winPath ? ctx.winPath(plain(k)) : k });
-    t.innerHTML = `<span class="ic">${iconOf(k)}</span><span class="nm">${esc(nameOf(k))}</span>`;
-    dragify(t, { kind: 'tile', id: k, tap: () => openEntry(k), menu: (px, py) => tileMenu(k, px, py) });
+    t.innerHTML = `<span class="ck">✓</span><span class="ic">${iconOf(k)}</span><span class="nm">${esc(nameOf(k))}</span>`;
+    dragify(t, { kind: 'tile', id: k, tap: () => (selMode ? toggleSel(k) : openEntry(k)), lp: () => toggleSel(k), menu: (px, py) => tileMenu(k, px, py) });
     gridEl.appendChild(t);
   });
+  paintSel();
 }
 
 /* ---------- ドラッグ: 並べ替え・別のグループへ移動 ---------- */
 // マウス: 少し動かすとドラッグ / 指: 約0.35秒の長押しのあとで動かす(先に動かすと、ふつうのスクロール)。長押しして動かさずに離す(マウスは右クリック)と、メニュー
 function dragify(node, o) {
   node.addEventListener('pointerdown', e => {
-    if (e.button > 0) return; const mouse = e.pointerType === 'mouse', id = e.pointerId;
+    if (e.button > 0) return; const mouse = e.pointerType === 'mouse', id = e.pointerId; lastPT = e.pointerType;
     const st = drag = { on: false, x: e.clientX, y: e.clientY, moved: false, timer: 0, ghost: null, target: null, pos: '', kind: o.kind, key: o.id };
     const clear = () => el.querySelectorAll('.ins-b,.ins-a,.hot').forEach(n => n.classList.remove('ins-b', 'ins-a', 'hot'));
     const start = () => {
       st.on = true; node.classList.add('lau-src'); try { node.setPointerCapture(id); } catch {}
-      const r = node.getBoundingClientRect(), gh = node.cloneNode(true); gh.classList.remove('lau-src'); gh.classList.add('lau-ghost'); gh.style.width = r.width + 'px'; gh.style.height = r.height + 'px';
+      const r = node.getBoundingClientRect(), gh = node.cloneNode(true); gh.classList.remove('lau-src'); gh.classList.add('lau-ghost'); if (o.kind === 'tile' && selMode && sel.has(o.id) && sel.size > 1) gh.insertAdjacentHTML('beforeend', '<span class="lau-gcnt">' + sel.size + '</span>'); gh.style.width = r.width + 'px'; gh.style.height = r.height + 'px';
       st.dx = st.x - r.left; st.dy = st.y - r.top; document.body.appendChild(gh); st.ghost = gh; place(e.clientX, e.clientY);
       try { if (navigator.vibrate) navigator.vibrate(12); } catch {}
     };
@@ -312,7 +326,7 @@ function dragify(node, o) {
       const tile = hit.closest('.lau-tile'), tab = hit.closest('.lau-tab[data-gid]');
       const half = n => { const r = n.getBoundingClientRect(); return ev.clientX < r.left + r.width / 2 ? 'b' : 'a'; };
       if (o.kind === 'tile') {
-        if (tile && tile.dataset.k !== o.id) { st.target = { type: 'tile', key: tile.dataset.k }; st.pos = half(tile); tile.classList.add('ins-' + st.pos); }
+        if (tile && tile.dataset.k !== o.id && !(selMode && sel.has(o.id) && sel.has(tile.dataset.k))) { st.target = { type: 'tile', key: tile.dataset.k }; st.pos = half(tile); tile.classList.add('ins-' + st.pos); }
         else if (tab && tab.dataset.gid !== curGroup().id) { st.target = { type: 'tab', gid: tab.dataset.gid }; tab.classList.add('hot'); }
         else if (hit.closest('.lau-grid') && !tile) st.target = { type: 'end' };
       } else if (tab && tab.dataset.gid !== o.id) { st.target = { type: 'tab', gid: tab.dataset.gid }; st.pos = half(tab); tab.classList.add('ins-' + st.pos); }
@@ -321,24 +335,37 @@ function dragify(node, o) {
     const up = ev => {
       const was = st.on, moved = st.moved, target = st.target, pos = st.pos; finish();
       if (was && moved) { if (target) dropOn(o, target, pos); return; }
-      if (was) { openMenu(o, ev.clientX, ev.clientY); return; } // 長押しして動かさずに離した
+      if (was) { longPress(o, ev.clientX, ev.clientY); return; } // 長押しして動かさずに離した
       o.tap();
     };
-    const cancel = () => { const lp = st.on && !st.moved; finish(); if (lp) openMenu(o, st.x, st.y); }; // 長押しのあと、ブラウザが操作を取り上げた(携帯の長押しメニューなど)ときも、メニューを出す
+    const cancel = () => { const lp = st.on && !st.moved; finish(); if (lp) longPress(o, st.x, st.y); }; // 長押しのあと、ブラウザが操作を取り上げた(携帯の長押しメニューなど)ときも、メニューを出す
     if (!mouse) st.timer = setTimeout(() => { if (drag === st) start(); }, 350);
     node.addEventListener('pointermove', mv); node.addEventListener('pointerup', up); node.addEventListener('pointercancel', cancel);
   });
-  node.addEventListener('contextmenu', e => { e.preventDefault(); openMenu(o, e.clientX, e.clientY); });
+  node.addEventListener('contextmenu', e => { e.preventDefault(); if (lastPT === 'mouse' || !lastPT) openMenu(o, e.clientX, e.clientY); }); // 右クリックだけ。指の長押しは、選択(上の longPress)
+}
+// 選択(長押しで入る。左上にチェック。複数選択して、まとめて削除・移動できる)
+let selMode = false, lastPT = ''; const sel = new Set();
+const selKeys = () => (curGroup() ? curGroup().items : []).filter(k => sel.has(k)); // グループ内の並び順
+function paintSel() { if (!gridEl) return; card.classList.toggle('selmode', selMode); gridEl.querySelectorAll('.lau-tile').forEach(t => t.classList.toggle('sel', sel.has(t.dataset.k))); const c = card.querySelector('.lau-sc'); if (c) c.textContent = sel.size + '件'; }
+function setSel(on) { selMode = on; if (!on) sel.clear(); paintSel(); }
+function toggleSel(k) { if (sel.has(k)) sel.delete(k); else sel.add(k); selMode = sel.size > 0; paintSel(); }
+async function deleteSel() {
+  const keys = selKeys(); if (!keys.length) return;
+  const r = await ctx.dialog({ title: '登録の削除', body: '<p>選んだ ' + keys.length + ' 件を、ランチャーから削除します。ファイル・フォルダー本体は消えません。</p>', buttons: [{ label: '削除', value: true, cls: 'danger' }, { label: 'キャンセル', value: false, cancel: true }] });
+  if (!r || !r.value) return; setSel(false); await update(d => { keys.forEach(k => rmKey(d, k)); });
 }
 let menuAt = 0; // 長押し/右クリックのメニューを、二重に出さない(pointerup・pointercancel・contextmenu のどれが先に来ても、1回だけ)
+function longPress(o, x, y) { const n = performance.now(); if (n - menuAt < 700) return; menuAt = n; if (o.lp) o.lp(); else o.menu(x, y); } // 長押し: タイルは選択、そのほか(グループのタブ)はメニュー
 function openMenu(o, x, y) { const n = performance.now(); if (n - menuAt < 700) return; menuAt = n; o.menu(x, y); }
 function dropOn(o, t, pos) {
   if (o.kind === 'tile') {
-    const k = o.id, from = curGroup();
-    if (t.type === 'tab') return update(d => { rmKey(d, k); grp(d, t.gid).items.push(k); });
+    const k = o.id, from = curGroup(), keys = selMode && sel.has(k) ? selKeys() : [k]; // 選択中のタイルをつかんだら、選択したもの全部が動く
+    if (t.type === 'tab') return update(d => { keys.forEach(x => rmKey(d, x)); keys.forEach(x => grp(d, t.gid).items.push(x)); });
+    if (t.type === 'tile' && keys.includes(t.key)) return;
     update(d => {
-      const g = grp(d, from.id); g.items = g.items.filter(x => x !== k);
-      if (t.type === 'tile') { let i = g.items.indexOf(t.key); if (i < 0) i = g.items.length; else if (pos === 'a') i++; g.items.splice(i, 0, k); } else g.items.push(k);
+      const g = grp(d, from.id); g.items = g.items.filter(x => !keys.includes(x));
+      if (t.type === 'tile') { let i = g.items.indexOf(t.key); if (i < 0) i = g.items.length; else if (pos === 'a') i++; g.items.splice(i, 0, ...keys); } else g.items.push(...keys);
     });
   } else if (t.type === 'tab') {
     const gid = o.id; update(d => {
