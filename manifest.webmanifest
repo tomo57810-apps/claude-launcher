@@ -1,0 +1,17 @@
+{
+  "id": "/claude-launcher/",
+  "name": "ランチャー(Claude専用フォルダ)",
+  "short_name": "ランチャー",
+  "description": "好きなフォルダー・ファイルを、ワンタップで開く",
+  "lang": "ja",
+  "start_url": "/claude-launcher/",
+  "scope": "/claude-launcher/",
+  "display": "standalone",
+  "background_color": "#0067c0",
+  "theme_color": "#0067c0",
+  "icons": [
+    { "src": "launcher-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "launcher-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "launcher-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

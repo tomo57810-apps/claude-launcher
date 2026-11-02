@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ランチャー</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0067c0">
+<link rel="icon" href="launcher-192.png">
+<link rel="apple-touch-icon" href="launcher-192.png">
+<style>
+html, body { margin: 0; height: 100%; font-family: "Yu Gothic UI", "Meiryo UI", "Segoe UI", sans-serif; font-size: 14px; color: #1b1b1b; background: #0067c0; }
+#login { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #0067c0; z-index: 300; }
+#login[hidden] { display: none; }
+#login form { width: min(92vw, 380px); background: #fff; border-radius: 12px; padding: 18px 18px 14px; box-shadow: 0 8px 30px rgba(0,0,0,.35); }
+#login h1 { margin: 0 0 10px; font-size: 18px; }
+#login label { display: block; margin: 10px 0 3px; font-size: 12px; color: #555; }
+#login input { width: 100%; box-sizing: border-box; height: 40px; padding: 0 10px; border: 1px solid #c8c8c8; border-radius: 8px; font: inherit; }
+#login button { margin-top: 14px; width: 100%; height: 42px; border: 0; border-radius: 8px; background: #0067c0; color: #fff; font: inherit; font-size: 15px; }
+#login .err { color: #c00; min-height: 18px; margin-top: 8px; font-size: 13px; }
+#login .note { color: #777; font-size: 11.5px; line-height: 1.5; margin-top: 8px; }
+.sa-menu { position: fixed; z-index: 400; min-width: 180px; max-width: 86vw; background: #fff; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.35); padding: 4px 0; font-size: 14px; }
+.sa-menu div { padding: 11px 16px; cursor: pointer; }
+.sa-menu div:hover { background: #e8f0fb; }
+.sa-menu div.dis { color: #aaa; pointer-events: none; }
+.sa-menu hr { border: 0; border-top: 1px solid #e3e3e3; margin: 3px 0; }
+.sa-dlg-bg { position: fixed; inset: 0; z-index: 450; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; }
+.sa-dlg { width: min(90vw, 380px); background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 8px 30px rgba(0,0,0,.4); }
+.sa-dlg h2 { margin: 0 0 8px; font-size: 16px; }
+.sa-dlg input { width: 100%; box-sizing: border-box; height: 38px; padding: 0 10px; border: 1px solid #c8c8c8; border-radius: 8px; font: inherit; margin-top: 6px; }
+.sa-dlg .bt { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+.sa-dlg button { height: 38px; padding: 0 16px; border: 1px solid #c8c8c8; border-radius: 8px; background: #f3f3f3; font: inherit; }
+.sa-dlg button.primary { background: #0067c0; border-color: #0067c0; color: #fff; }
+.sa-dlg button.danger { background: #c62828; border-color: #c62828; color: #fff; }
+.sa-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 500; background: rgba(30,30,30,.92); color: #fff; padding: 9px 16px; border-radius: 18px; font-size: 13px; max-width: 88vw; }
+</style>
+</head>
+<body>
+<div id="login" hidden>
+  <form id="lf" autocomplete="on">
+    <h1>🚀 ランチャー</h1>
+    <label for="lf-srv">サーバーのアドレス</label>
+    <input id="lf-srv" type="url" inputmode="url" autocomplete="off" placeholder="https://…">
+    <label for="lf-user">ユーザー名</label>
+    <input id="lf-user" type="text" autocomplete="username">
+    <label for="lf-pw">パスワード</label>
+    <input id="lf-pw" type="password" autocomplete="current-password">
+    <button type="submit">ログイン</button>
+    <div class="err" id="lf-err"></div>
+    <div class="note">ログインすると、30日間は、入力を求めません(この端末だけ。ランチャーの登録の読み書き専用の印です)。</div>
+  </form>
+</div>
+<script>window.__LAUNCHER_STANDALONE = true;</script>
+<script src="launcher.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
