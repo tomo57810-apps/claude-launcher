@@ -160,17 +160,25 @@ function build() {
   el.addEventListener('contextmenu', e => e.preventDefault());
   // エクスプローラーの一覧から、フォルダー・ファイルをドラッグして落とすと、登録する(グループのタブの上に落とすと、そのグループへ。それ以外は、いま見ているグループへ)
   const FB = 'application/x-fb-paths', clearHot = () => { card.classList.remove('lau-drop'); tabsEl.querySelectorAll('.hot').forEach(n => n.classList.remove('hot')); };
+  const hasPaths = dt => !!dt && ((dt.types && [...dt.types].some(t => t === FB || t === 'text/uri-list')));
+  const pathsOf = dt => { // 同じ画面の中=独自の形式。別の窓(別アプリ)=リンク(…?go=/フォルダー か ?open=/ファイル)
+    let paths = [], kinds = []; try { paths = JSON.parse(dt.getData(FB)); } catch {} try { kinds = JSON.parse(dt.getData('application/x-fb-kinds')); } catch {}
+    if (Array.isArray(paths) && paths.length) return { paths, kinds };
+    paths = []; kinds = []; let u = ''; try { u = dt.getData('text/uri-list') || ''; } catch {}
+    for (const ln of u.split(/\r?\n/)) { if (!ln || ln[0] === '#') continue; try { const q = new URL(ln).searchParams, g = q.get('go'), o = q.get('open'); if (g && g[0] === '/') { paths.push(g); kinds.push(true); } else if (o && o[0] === '/') { paths.push(o); kinds.push(false); } } catch {} }
+    return { paths, kinds };
+  };
   card.addEventListener('dragover', e => {
-    if (!e.dataTransfer || ![...(e.dataTransfer.types || [])].includes(FB)) return;
+    if (!hasPaths(e.dataTransfer)) return;
     e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'copy'; clearHot();
     const tab = e.target.closest && e.target.closest('.lau-tab[data-gid]'); if (tab) tab.classList.add('hot'); else card.classList.add('lau-drop');
   });
   card.addEventListener('dragleave', e => { if (!card.contains(e.relatedTarget)) clearHot(); });
   card.addEventListener('drop', e => {
-    if (!e.dataTransfer || ![...(e.dataTransfer.types || [])].includes(FB)) return;
+    if (!hasPaths(e.dataTransfer)) return;
     e.preventDefault(); e.stopPropagation(); clearHot();
-    let paths = [], kinds = []; try { paths = JSON.parse(e.dataTransfer.getData(FB)); } catch {} try { kinds = JSON.parse(e.dataTransfer.getData('application/x-fb-kinds')); } catch {}
-    if (!Array.isArray(paths) || !paths.length) return;
+    const { paths, kinds } = pathsOf(e.dataTransfer);
+    if (!paths.length) return;
     const tab = e.target.closest && e.target.closest('.lau-tab[data-gid]');
     addKeys(paths.filter(p => typeof p === 'string').map((p, i) => keyOf(p, kinds[i] === undefined ? !/\.[^/.]{1,8}$/.test(p) : !!kinds[i])), tab ? tab.dataset.gid : undefined);
   });
