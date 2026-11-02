@@ -109,7 +109,11 @@ const CSS = `
 html.lau-dock-r #app{width:calc(100% - var(--lau-d))}html.lau-dock-l #app{width:calc(100% - var(--lau-d));margin-left:var(--lau-d)}html.lau-dock-b #app{height:calc(100% - var(--lau-d))}
 html.lau-dock-r #pv{right:var(--lau-d)}html.lau-dock-l #pv{left:var(--lau-d)}html.lau-dock-b #pv{bottom:var(--lau-d)}
 html.lau-popup #app{visibility:hidden}
-.lau-card.standalone .lau-x,.lau-card.standalone .lau-add{display:none}
+.lau-card.standalone .lau-add{display:none}
+.lau-min{display:none!important}
+.lau-card.standalone .lau-min{display:inline-block!important}
+.lau-card.standalone.min{height:auto!important;bottom:auto!important}
+.lau-card.min .lau-tabs,.lau-card.min .lau-grid,.lau-card.min .lau-foot{display:none}
 .lau-card.lau-drop{outline:3px dashed #0067c0;outline-offset:-3px}
 `;
 
@@ -142,13 +146,14 @@ const nameOf = k => { const p = plain(k); return p === '/' ? (ctx.rootName || '�
 function build() {
   const st = h('style'); st.textContent = CSS; document.head.appendChild(st);
   el = h('div', { id: 'lau' }); el.hidden = true;
-  el.innerHTML = '<div class="lau-card"><div class="lau-head"><span class="lau-title">🚀 ランチャー</span><button class="lau-add" title="フォルダー・ファイルを、このグループに追加する">＋</button><button class="lau-view" title="表示(タイルの大きさ・一覧)">▦</button><button class="lau-lay" title="配置(浮かせる・画面を分割・別ウィンドウ・固定)">◫</button><button class="lau-rst" title="初期の大きさ・位置に戻す">⟲</button><button class="lau-more" title="その他(お気に入りから取り込む など)">⋯</button><button class="lau-x" title="閉じる">✕</button></div>' +
+  el.innerHTML = '<div class="lau-card"><div class="lau-head"><span class="lau-title">🚀 ランチャー</span><button class="lau-add" title="フォルダー・ファイルを、このグループに追加する">＋</button><button class="lau-view" title="表示(タイルの大きさ・一覧)">▦</button><button class="lau-lay" title="配置(浮かせる・画面を分割・別ウィンドウ・固定)">◫</button><button class="lau-rst" title="初期の大きさ・位置に戻す">⟲</button><button class="lau-more" title="その他(お気に入りから取り込む など)">⋯</button><button class="lau-min" title="最小化(見出しだけにする)">－</button><button class="lau-x" title="閉じる">✕</button></div>' +
     '<div class="lau-tabs"></div><div class="lau-grid"></div>' +
     ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].map(d => '<div class="lau-rz" data-d="' + d + '"></div>').join('') + '</div>';
   document.body.appendChild(el);
   card = el.querySelector('.lau-card'); tabsEl = el.querySelector('.lau-tabs'); gridEl = el.querySelector('.lau-grid');
   const at = (e, f) => { const r = e.currentTarget.getBoundingClientRect(); f(r.left, r.bottom + 4); };
-  el.querySelector('.lau-x').onclick = () => close();
+  el.querySelector('.lau-x').onclick = () => { if (STANDALONE) standaloneClose(); else close(); };
+  el.querySelector('.lau-min').onclick = e => { const m = card.classList.toggle('min'); e.currentTarget.textContent = m ? '▢' : '－'; e.currentTarget.title = m ? '元の大きさに戻す' : '最小化(見出しだけにする)'; }; // 別アプリ: 見出しだけにする/戻す
   el.querySelector('.lau-add').onclick = e => at(e, addMenu);
   el.querySelector('.lau-view').onclick = e => at(e, viewMenu);
   el.querySelector('.lau-lay').onclick = e => at(e, layMenu);
@@ -421,6 +426,10 @@ async function open() {
   shown = true; el.hidden = false; ctx.hideMenu(); layout();
   render(); await fetchDoc();
   if (shown && !D.groups.length) { await update(d => { d.groups.push({ id: newGid(), name: 'グループ1', items: [], groups: [] }); }); }
+}
+function standaloneClose() { // 別アプリ: 窓ごと閉じる。ブラウザが閉じさせない窓(アプリとして入れたもの)では、閉じられないので、案内を出す
+  try { window.close(); } catch {}
+  setTimeout(() => { if (document.visibilityState === 'visible') ctx.toast('この窓は、アプリからは閉じられません。窓の上の帯(つまみ)から閉じてください', 4500); }, 500);
 }
 function close() {
   if (!shown || STANDALONE) return;
