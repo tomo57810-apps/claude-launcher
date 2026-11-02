@@ -143,12 +143,16 @@ function start() {
       api, toast, dialog, showMenu, hideMenu, ovOpen() {}, ovClose() {}, ovDepth: () => 0, TOUCH: true, touchDev: true, rootName: '最上位', winPath: p => p, isLauncherPage: false,
       go: async p => openInExplorer('dir', p), openFile: async p => openInExplorer('file', p),
       cwd: () => '/', selection: () => [],
+      closeExplorerTab: async () => { // エクスプローラーの、いま開いているタブを閉じる(サーバー経由で、窓へ指示)
+        try { const r = await api('POST', '/api/tabcmd', { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cmd: 'closeTab', dev: isPhone() ? 'phone' : 'pc' }) }); const j = r.ok ? await r.json().catch(() => null) : null; toast(j && j.delivered > 0 ? 'エクスプローラーのタブを閉じました' : 'エクスプローラーの窓が見つかりません', 1800); } catch { toast('つながりません', 1800); }
+      },
       moreItems: () => [
         { label: OPENMODE === 'new' ? '✓ タップで、常に新しいタブで開く(押すと「いまのタブ」に切り替え)' : '✓ タップで、いまのタブで開く(押すと「常に新しいタブ」に切り替え)', fn: () => { OPENMODE = OPENMODE === 'new' ? 'cur' : 'new'; ls.set('lau_open', OPENMODE); toast(OPENMODE === 'new' ? '常に新しいタブで開きます' : 'いまのタブで開きます', 2200); } },
         { label: '📂 エクスプローラーのアプリを起動', fn: () => launchExplorerApp('dir', '/') },
         { label: '🔄 再読み込み', fn: () => location.reload() },
         { label: 'サーバー・ログインの設定', fn: () => showLogin('') },
         { label: 'ログアウト', fn: () => { TOKEN = ''; ls.del('lau_token'); showLogin('ログアウトしました'); } },
+        '-', { label: '版: ' + (window.LAUNCHER_VER || '不明'), dis: true },
       ],
     });
     // 登録の変更を、ほかの端末と合わせる(エクスプローラー側は、すぐ反映される。こちらは定期的に読み直す)
