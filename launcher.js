@@ -69,6 +69,7 @@ const CSS = `
 .lau-card.m-dock-r{border-left:2px solid #9bbfe8}.lau-card.m-dock-l{border-right:2px solid #9bbfe8}.lau-card.m-dock-b{border-top:2px solid #9bbfe8}
 .lau-head{display:flex;align-items:center;gap:5px;padding:6px 8px 4px 10px;flex:none;cursor:move;touch-action:none}
 .lau-card:not(.m-float) .lau-head{cursor:default}
+.lau-ver{font-weight:400;font-size:10.5px;color:#888;margin-left:4px}
 .lau-title{font-weight:600;flex:1;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lau-head button{height:34px;min-width:34px;padding:0 8px;border:1px solid #d0d0d0;border-radius:8px;background:#f6f6f6;font:inherit;cursor:pointer}
 .lau-card.m-fill .lau-lay,.lau-card.m-fill .lau-rst{display:none}
@@ -142,7 +143,7 @@ const nameOf = k => { const p = plain(k); return p === '/' ? (ctx.rootName || '�
 function build() {
   const st = h('style'); st.textContent = CSS; document.head.appendChild(st);
   el = h('div', { id: 'lau' }); el.hidden = true;
-  el.innerHTML = '<div class="lau-card"><div class="lau-head"><span class="lau-title">🚀 ランチャー</span><button class="lau-add" title="フォルダー・ファイルを、このグループに追加する">＋</button><button class="lau-view" title="表示(タイルの大きさ・一覧)">▦</button><button class="lau-lay" title="配置(浮かせる・画面を分割・別ウィンドウ・固定)">◫</button><button class="lau-rst" title="初期の大きさ・位置に戻す">⟲</button><button class="lau-more" title="その他(お気に入りから取り込む など)">⋯</button><button class="lau-x" title="閉じる">✕</button></div>' +
+  el.innerHTML = '<div class="lau-card"><div class="lau-head"><span class="lau-title">🚀 ランチャー<span class="lau-ver">' + (window.LAUNCHER_VER ? ' ' + window.LAUNCHER_VER : '') + '</span></span><button class="lau-add" title="フォルダー・ファイルを、このグループに追加する">＋</button><button class="lau-view" title="表示(タイルの大きさ・一覧)">▦</button><button class="lau-lay" title="配置(浮かせる・画面を分割・別ウィンドウ・固定)">◫</button><button class="lau-rst" title="初期の大きさ・位置に戻す">⟲</button><button class="lau-more" title="その他(お気に入りから取り込む など)">⋯</button><button class="lau-x" title="閉じる">✕</button></div>' +
     '<div class="lau-tabs"></div><div class="lau-grid"></div>' +
     ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].map(d => '<div class="lau-rz" data-d="' + d + '"></div>').join('') + '</div>';
   document.body.appendChild(el);
@@ -320,15 +321,17 @@ function dragify(node, o) {
     const up = ev => {
       const was = st.on, moved = st.moved, target = st.target, pos = st.pos; finish();
       if (was && moved) { if (target) dropOn(o, target, pos); return; }
-      if (was) { o.menu(ev.clientX, ev.clientY); return; } // 長押しして動かさずに離した
+      if (was) { openMenu(o, ev.clientX, ev.clientY); return; } // 長押しして動かさずに離した
       o.tap();
     };
-    const cancel = () => finish();
+    const cancel = () => { const lp = st.on && !st.moved; finish(); if (lp) openMenu(o, st.x, st.y); }; // 長押しのあと、ブラウザが操作を取り上げた(携帯の長押しメニューなど)ときも、メニューを出す
     if (!mouse) st.timer = setTimeout(() => { if (drag === st) start(); }, 350);
     node.addEventListener('pointermove', mv); node.addEventListener('pointerup', up); node.addEventListener('pointercancel', cancel);
   });
-  node.addEventListener('contextmenu', e => { e.preventDefault(); if (e.pointerType === 'mouse' || !('ontouchstart' in window)) o.menu(e.clientX, e.clientY); });
+  node.addEventListener('contextmenu', e => { e.preventDefault(); openMenu(o, e.clientX, e.clientY); });
 }
+let menuAt = 0; // 長押し/右クリックのメニューを、二重に出さない(pointerup・pointercancel・contextmenu のどれが先に来ても、1回だけ)
+function openMenu(o, x, y) { const n = performance.now(); if (n - menuAt < 700) return; menuAt = n; o.menu(x, y); }
 function dropOn(o, t, pos) {
   if (o.kind === 'tile') {
     const k = o.id, from = curGroup();
