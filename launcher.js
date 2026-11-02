@@ -29,7 +29,7 @@ const MODES = ['float', 'dock-r', 'dock-l', 'dock-b'];
 const STANDALONE = !!window.__LAUNCHER_STANDALONE; // 別アプリ(github.io の専用ページ)として動いているとき: 窓ではなく、画面いっぱいに出し続ける
 let mode = (popup || STANDALONE) ? 'fill' : (MODES.includes(lsGet('fb_lau_mode', 'float')) ? lsGet('fb_lau_mode', 'float') : 'float');
 let pin = lsGet('fb_lau_pin', '1') !== '0'; // 既定: 固定(フォルダー・ファイルを選んでも閉じない)
-let view = ['s', 'm', 'l', 'list'].includes(lsGet('fb_lau_view', 'm')) ? lsGet('fb_lau_view', 'm') : 'm';
+let view = ['xs', 's', 'm', 'l', 'list'].includes(lsGet('fb_lau_view', 'm')) ? lsGet('fb_lau_view', 'm') : 'm';
 const lsJson = (k, d) => { try { const v = JSON.parse(lsGet(k, '')); return v && typeof v === 'object' ? v : d; } catch { return d; } };
 let geo = lsJson('fb_lau_geo', null); // 浮かせているときの {x,y,w,h}。無ければ既定(右下)
 const DOCK0 = { r: 360, l: 360, b: 300 };
@@ -101,6 +101,7 @@ const CSS = `
 .lau-tile.ins-b{box-shadow:inset 4px 0 #ffb300}.lau-tile.ins-a{box-shadow:inset -4px 0 #ffb300}
 .lau-tab.ins-b{box-shadow:inset 4px 0 #ffb300}.lau-tab.ins-a{box-shadow:inset -4px 0 #ffb300}
 .lau-tab.hot{outline:3px solid #ffb300;outline-offset:1px}
+.lau-card.v-xs{--lt:56px}.lau-card.v-xs .lau-grid{gap:5px;padding:7px}.lau-card.v-xs .lau-tile{gap:1px;padding:3px 3px 2px}.lau-card.v-xs .lau-tile .ic{font-size:18px}.lau-card.v-xs .lau-tile .nm{font-size:9.5px;line-height:1.1}.lau-card.v-xs .lau-tile .ck{width:16px;height:16px;font-size:10px;line-height:12px}
 .lau-card.v-s{--lt:76px}.lau-card.v-s .lau-tile .ic{font-size:24px}.lau-card.v-s .lau-tile .nm{font-size:11px}
 .lau-card.v-m{--lt:104px}
 .lau-card.v-l{--lt:144px}.lau-card.v-l .lau-tile .ic{font-size:46px}.lau-card.v-l .lau-tile .nm{font-size:14px}
@@ -229,7 +230,7 @@ function setMode(m) { mode = m; saveState(); layout(); }
 function setView(v) { view = v; saveState(); layout(); }
 function viewMenu(x, y) {
   ctx.showMenu(x, y, [
-    { label: chk(view === 's', 'タイル(小)'), fn: () => setView('s') }, { label: chk(view === 'm', 'タイル(中)'), fn: () => setView('m') },
+    { label: chk(view === 'xs', 'タイル(極小)'), fn: () => setView('xs') }, { label: chk(view === 's', 'タイル(小)'), fn: () => setView('s') }, { label: chk(view === 'm', 'タイル(中)'), fn: () => setView('m') },
     { label: chk(view === 'l', 'タイル(大)'), fn: () => setView('l') }, { label: chk(view === 'list', '一覧(1行ずつ)'), fn: () => setView('list') },
   ]);
 }
