@@ -6,12 +6,16 @@ const ls = { get: (k, d = '') => { try { const v = localStorage.getItem(k); retu
 const $ = id => document.getElementById(id);
 const trimUrl = s => String(s || '').trim().replace(/\/+$/, '');
 const SRV_RE = /^(https:\/\/[^/\s]+|http:\/\/(127\.0\.0\.1|localhost))(:\d+)?$/; // https だけ(試験用に、この端末の 127.0.0.1 だけ http も可)
-let SERVER = trimUrl(ls.get('lau_server')), TOKEN = ls.get('lau_token'), USER = ls.get('lau_user');
+const PKG_RE = /^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$/; // Android のアプリの識別名(パッケージ名)。例: org.chromium.webapk.xxxxxxxx_v2
+let SERVER = trimUrl(ls.get('lau_server')), TOKEN = ls.get('lau_token'), USER = ls.get('lau_user'), PKG = ls.get('lau_pkg');
 
 // 初回: アドレスの #server=… を取り込み、アドレス欄からは消す
 try {
   const m = /[#&]server=([^&]+)/.exec(location.hash);
-  if (m) { const s = trimUrl(decodeURIComponent(m[1])); if (SRV_RE.test(s)) { SERVER = s; ls.set('lau_server', s); } history.replaceState(null, '', location.pathname + location.search); }
+  const mp = /[#&]pkg=([^&]+)/.exec(location.hash); // エクスプローラーのアプリの識別名(任意)。あると、右に開いているエクスプローラーの窓を、直接呼べる
+  if (m) { const s = trimUrl(decodeURIComponent(m[1])); if (SRV_RE.test(s)) { SERVER = s; ls.set('lau_server', s); } }
+  if (mp) { const k = decodeURIComponent(mp[1]).trim(); if (PKG_RE.test(k)) { PKG = k; ls.set('lau_pkg', k); } }
+  if (m || mp) history.replaceState(null, '', location.pathname + location.search);
 } catch {}
 
 /* ---------- 画面部品 ---------- */
@@ -56,13 +60,15 @@ async function api(method, path, opt = {}) {
   return r;
 }
 function showLogin(msg) {
-  $('login').hidden = false; $('lf-srv').value = SERVER; $('lf-user').value = USER || ''; $('lf-pw').value = ''; $('lf-err').textContent = msg || '';
+  $('login').hidden = false; $('lf-srv').value = SERVER; $('lf-pkg').value = PKG || ''; $('lf-user').value = USER || ''; $('lf-pw').value = ''; $('lf-err').textContent = msg || '';
   (SERVER ? ($('lf-user').value ? $('lf-pw') : $('lf-user')) : $('lf-srv')).focus();
 }
 $('lf').addEventListener('submit', async e => {
   e.preventDefault(); const srv = trimUrl($('lf-srv').value), user = $('lf-user').value.trim(), pw = $('lf-pw').value; const err = $('lf-err'); err.textContent = '';
   if (!SRV_RE.test(srv)) { err.textContent = 'サーバーのアドレスは、https:// から始めて、入れてください'; return; }
   if (!user || !pw) { err.textContent = 'ユーザー名とパスワードを入れてください'; return; }
+  const pk = $('lf-pkg').value.trim(); if (pk && !PKG_RE.test(pk)) { err.textContent = '識別名の形が違います(例: org.chromium.webapk.xxxxxxxx_v2)。空にすると、使いません'; return; }
+  PKG = pk; if (pk) ls.set('lau_pkg', pk); else ls.del('lau_pkg');
   err.textContent = 'ログイン中…';
   try {
     const r = await fetch(srv + '/api/login', { method: 'POST', body: JSON.stringify({ username: user, password: pw, scope: 'launcher' }) });
@@ -75,9 +81,18 @@ $('lf').addEventListener('submit', async e => {
 
 /* ---------- 項目を開く: エクスプローラーのアプリへ渡す ---------- */
 // リンクのタップとして開く(携帯は、入れてあるエクスプローラーのアプリが引き取る)。window.open だと、引き取られないことがあるため
+// 識別名(PKG)があるときは、Android の「インテント」で、エクスプローラーのアプリを名指しで呼ぶ。すでに開いている窓(分割画面の右など)が、そのまま、指定のフォルダーへ移る。
+// 無いときは、ふつうのリンクとして開く(引き取られるアプリは、携帯が決める。ランチャーの窓の中で開いてしまうことがある)
+function explorerUrl(kind, p) { return SERVER + '/static/img/explorer.html?' + (kind === 'dir' ? 'go=' : 'open=') + encodeURIComponent(p); }
+function intentUrl(kind, p, pkg) {
+  const https = explorerUrl(kind, p), u = new URL(https);
+  return 'intent://' + u.host + u.pathname + u.search + '#Intent;scheme=' + u.protocol.replace(':', '') + ';package=' + pkg + ';S.browser_fallback_url=' + encodeURIComponent(https) + ';end';
+}
 function openInExplorer(kind, p) {
-  const a = document.createElement('a'); a.href = SERVER + '/static/img/explorer.html?' + (kind === 'dir' ? 'go=' : 'open=') + encodeURIComponent(p);
-  a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove();
+  const a = document.createElement('a');
+  if (PKG && PKG_RE.test(PKG)) a.href = intentUrl(kind, p, PKG);
+  else { a.href = explorerUrl(kind, p); a.target = '_blank'; a.rel = 'noopener'; }
+  document.body.appendChild(a); a.click(); a.remove();
   return true;
 }
 
