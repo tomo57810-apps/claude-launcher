@@ -358,10 +358,10 @@ function tabMenu(g, x, y) {
 function tileMenu(k, x, y) {
   const g = curGroup();
   ctx.showMenu(x, y, [
+    { label: '🗑 ランチャーから削除(ファイルは消えません)', fn: () => update(d => rmKey(d, k)) }, '-',
     { label: '開く', fn: () => openEntry(k) },
     { label: 'エクスプローラーで、場所を開く', fn: () => openEntry(isDirKey(k) ? k : k.replace(/[^/]+$/, '') || '/') },
     '-', ...D.groups.filter(q => !g || q.id !== g.id).map(q => ({ label: '「' + q.name + '」へ移動', fn: () => update(d => { rmKey(d, k); grp(d, q.id).items.push(k); }) })),
-    '-', { label: '登録を削除(ファイルは消えません)', fn: () => update(d => rmKey(d, k)) },
   ]);
 }
 function addMenu(x, y) {

@@ -91,11 +91,13 @@ function intentUrl(kind, p, pkg) {
 // まず、サーバー経由で、いま開いているエクスプローラーの窓(携帯)に、指示を送る。窓の配置(分割・ポップアップ)に関係なく届く。届いた窓が無ければ、アプリを起動する
 async function openInExplorer(kind, p) {
   try {
-    const r = await api('POST', '/api/goto', { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: p, kind, dev: isPhone() ? 'phone' : 'pc' }) });
+    const r = await api('POST', '/api/goto', { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: p, kind, dev: isPhone() ? 'phone' : 'pc', tab: kind === 'dir' && OPENMODE === 'new' ? 'new' : 'cur' }) });
     if (r.ok) { const j = await r.json().catch(() => null); if (j && j.delivered > 0) { toast(kind === 'dir' ? 'エクスプローラーで開きました' : 'エクスプローラーに送りました', 1500); return true; } }
   } catch {}
   return launchExplorerApp(kind, p);
 }
+// 開き方: 'new'=タップするたびに、エクスプローラーの新しいタブで開く(既定)/ 'cur'=いま開いているタブで開く(従来)
+let OPENMODE = ls.get('lau_open', 'new') === 'cur' ? 'cur' : 'new';
 const isPhone = () => (navigator.maxTouchPoints > 0) && /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent); // 携帯か(パソコンのブラウザは、インテントが使えない)
 // パソコン(複数のモニター): エクスプローラーを、いちばん右のモニターに、そのモニターいっぱいの窓で出す。
 // モニターの位置は、ブラウザの許可(「すべてのディスプレイ上のウィンドウを管理」)が要る。最初にページを触ったとき、1回だけ聞く(押した直後に聞くと、窓を開く許可の時間が切れるため)
@@ -142,6 +144,7 @@ function start() {
       go: async p => openInExplorer('dir', p), openFile: async p => openInExplorer('file', p),
       cwd: () => '/', selection: () => [],
       moreItems: () => [
+        { label: OPENMODE === 'new' ? '✓ タップで、常に新しいタブで開く(押すと「いまのタブ」に切り替え)' : '✓ タップで、いまのタブで開く(押すと「常に新しいタブ」に切り替え)', fn: () => { OPENMODE = OPENMODE === 'new' ? 'cur' : 'new'; ls.set('lau_open', OPENMODE); toast(OPENMODE === 'new' ? '常に新しいタブで開きます' : 'いまのタブで開きます', 2200); } },
         { label: '📂 エクスプローラーのアプリを起動', fn: () => launchExplorerApp('dir', '/') },
         { label: '🔄 再読み込み', fn: () => location.reload() },
         { label: 'サーバー・ログインの設定', fn: () => showLogin('') },
