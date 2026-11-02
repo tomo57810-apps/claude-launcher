@@ -342,7 +342,7 @@ function dragify(node, o) {
     if (!mouse) st.timer = setTimeout(() => { if (drag === st) start(); }, 350);
     node.addEventListener('pointermove', mv); node.addEventListener('pointerup', up); node.addEventListener('pointercancel', cancel);
   });
-  node.addEventListener('contextmenu', e => { e.preventDefault(); if (lastPT === 'mouse' || !lastPT) openMenu(o, e.clientX, e.clientY); }); // 右クリックだけ。指の長押しは、選択(上の longPress)
+  node.addEventListener('contextmenu', e => { e.preventDefault(); if (lastPT === 'mouse' || !lastPT) openMenu(o, e.clientX, e.clientY); else longPress(o, e.clientX, e.clientY); }); // 右クリック=メニュー / 指の長押し=選択(携帯の Chrome は、長押しで、まずこのイベントが来る。pointerup・pointercancel が来ない場合がある)
 }
 // 選択(長押しで入る。左上にチェック。複数選択して、まとめて削除・移動できる)
 let selMode = false, lastPT = ''; const sel = new Set();
@@ -356,7 +356,8 @@ async function deleteSel() {
   if (!r || !r.value) return; setSel(false); await update(d => { keys.forEach(k => rmKey(d, k)); });
 }
 let menuAt = 0; // 長押し/右クリックのメニューを、二重に出さない(pointerup・pointercancel・contextmenu のどれが先に来ても、1回だけ)
-function longPress(o, x, y) { const n = performance.now(); if (n - menuAt < 700) return; menuAt = n; if (o.lp) o.lp(); else o.menu(x, y); } // 長押し: タイルは選択、そのほか(グループのタブ)はメニュー
+let lpKey = null;
+function longPress(o, x, y) { const n = performance.now(); if (lpKey === o.id && n - menuAt < 3000) return; lpKey = o.id; menuAt = n; /* 同じタイルの長押しは、contextmenu・pointerup・pointercancel のうち最初の1つだけ(長く押したままでも、選択が戻らない) */ if (o.lp) o.lp(); else o.menu(x, y); } // 長押し: タイルは選択、そのほか(グループのタブ)はメニュー
 function openMenu(o, x, y) { const n = performance.now(); if (n - menuAt < 700) return; menuAt = n; o.menu(x, y); }
 function dropOn(o, t, pos) {
   if (o.kind === 'tile') {
