@@ -143,6 +143,9 @@ function start() {
       api, toast, dialog, showMenu, hideMenu, ovOpen() {}, ovClose() {}, ovDepth: () => 0, TOUCH: true, touchDev: true, rootName: '最上位', winPath: p => p, isLauncherPage: false,
       go: async p => openInExplorer('dir', p), openFile: async p => openInExplorer('file', p),
       cwd: () => '/', selection: () => [],
+      sendTabCmd: async cmd => { // エクスプローラーの、いまのタブへの操作(サーバー経由で、窓へ指示)
+        try { const r = await api('POST', '/api/tabcmd', { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cmd, dev: isPhone() ? 'phone' : 'pc' }) }); const j = r.ok ? await r.json().catch(() => null) : null; if (!(j && j.delivered > 0)) toast('エクスプローラーの窓が見つかりません', 1800); } catch { toast('つながりません', 1800); }
+      },
       closeExplorerTab: async () => { // エクスプローラーの、いま開いているタブを閉じる(サーバー経由で、窓へ指示)
         try { const r = await api('POST', '/api/tabcmd', { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cmd: 'closeTab', dev: isPhone() ? 'phone' : 'pc' }) }); const j = r.ok ? await r.json().catch(() => null) : null; toast(j && j.delivered > 0 ? 'エクスプローラーのタブを閉じました' : 'エクスプローラーの窓が見つかりません', 1800); } catch { toast('つながりません', 1800); }
       },

@@ -70,7 +70,8 @@ const CSS = `
 .lau-head{display:flex;align-items:center;gap:5px;padding:6px 8px 4px 10px;flex:none;cursor:move;touch-action:none}
 .lau-card:not(.m-float) .lau-head{cursor:default}
 .lau-tabx{display:none;font-size:12.5px;font-weight:600;color:#b3261e;border-color:#e6b8b4!important;background:#fdf0ef!important;padding:0 8px!important;min-width:0!important;white-space:nowrap}
-.lau-card.standalone .lau-tabx{display:inline-block}.lau-card.selmode .lau-tabx{display:none!important}
+.lau-tabop{display:none;font-size:15px;padding:0!important;min-width:34px}
+.lau-card.standalone .lau-tabx,.lau-card.standalone .lau-tabop{display:inline-block}.lau-card.selmode .lau-tabx,.lau-card.selmode .lau-tabop{display:none!important}
 .lau-trash,.lau-sc,.lau-selx{display:none}
 .lau-sc{font-size:13px;color:#0067c0;font-weight:600;white-space:nowrap}
 .lau-card.selmode .lau-trash,.lau-card.selmode .lau-selx{display:inline-block}.lau-card.selmode .lau-sc{display:inline}
@@ -155,7 +156,7 @@ const nameOf = k => { const p = plain(k); return p === '/' ? (ctx.rootName || '�
 function build() {
   const st = h('style'); st.textContent = CSS; document.head.appendChild(st);
   el = h('div', { id: 'lau' }); el.hidden = true;
-  el.innerHTML = '<div class="lau-card"><div class="lau-head"><span class="lau-title">🚀 ランチャー</span><button class="lau-tabx" title="エクスプローラーの、いま開いているタブを閉じる">タブ✕</button><button class="lau-trash" title="選んだ登録を、ランチャーから削除する(ファイルは消えません)">🗑</button><span class="lau-sc"></span><button class="lau-selx" title="選択をやめる">選択解除</button><button class="lau-add" title="フォルダー・ファイルを、このグループに追加する">＋</button><button class="lau-view" title="表示(タイルの大きさ・一覧)">▦</button><button class="lau-lay" title="配置(浮かせる・画面を分割・別ウィンドウ・固定)">◫</button><button class="lau-rst" title="初期の大きさ・位置に戻す">⟲</button><button class="lau-more" title="その他(お気に入りから取り込む など)">⋯</button><button class="lau-x" title="閉じる">✕</button></div>' +
+  el.innerHTML = '<div class="lau-card"><div class="lau-head"><span class="lau-title">🚀 ランチャー</span><button class="lau-tabop" title="エクスプローラーの、いまのタブの操作(右に複製・これ以外を閉じる・左右へ移動)">📑</button><button class="lau-tabx" title="エクスプローラーの、いま開いているタブを閉じる">タブ✕</button><button class="lau-trash" title="選んだ登録を、ランチャーから削除する(ファイルは消えません)">🗑</button><span class="lau-sc"></span><button class="lau-selx" title="選択をやめる">選択解除</button><button class="lau-add" title="フォルダー・ファイルを、このグループに追加する">＋</button><button class="lau-view" title="表示(タイルの大きさ・一覧)">▦</button><button class="lau-lay" title="配置(浮かせる・画面を分割・別ウィンドウ・固定)">◫</button><button class="lau-rst" title="初期の大きさ・位置に戻す">⟲</button><button class="lau-more" title="その他(お気に入りから取り込む など)">⋯</button><button class="lau-x" title="閉じる">✕</button></div>' +
     '<div class="lau-tabs"></div><div class="lau-grid"></div>' +
     ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].map(d => '<div class="lau-rz" data-d="' + d + '"></div>').join('') + '</div>';
   document.body.appendChild(el);
@@ -163,6 +164,7 @@ function build() {
   const at = (e, f) => { const r = e.currentTarget.getBoundingClientRect(); f(r.left, r.bottom + 4); };
   el.querySelector('.lau-x').onclick = () => { if (STANDALONE) standaloneClose(); else close(); };
   el.querySelector('.lau-tabx').onclick = () => { if (ctx.closeExplorerTab) ctx.closeExplorerTab(); };
+  el.querySelector('.lau-tabop').onclick = e => at(e, tabOpMenu);
   el.querySelector('.lau-add').onclick = e => at(e, addMenu);
   el.querySelector('.lau-trash').onclick = () => deleteSel();
   el.querySelector('.lau-selx').onclick = () => setSel(false);
@@ -235,6 +237,10 @@ function viewMenu(x, y) {
     { label: chk(view === 'xs', 'タイル(極小)'), fn: () => setView('xs') }, { label: chk(view === 's', 'タイル(小)'), fn: () => setView('s') }, { label: chk(view === 'm', 'タイル(中)'), fn: () => setView('m') },
     { label: chk(view === 'l', 'タイル(大)'), fn: () => setView('l') }, { label: chk(view === 'list', '一覧(1行ずつ)'), fn: () => setView('list') },
   ]);
+}
+function tabOpMenu(x, y) { // エクスプローラーの、いまのタブへの操作(タブの長押しと同じ)
+  const go = c => () => ctx.sendTabCmd && ctx.sendTabCmd(c);
+  ctx.showMenu(x, y, [{ label: '右に複製', fn: go('dupTab') }, { label: 'これ以外を閉じる', fn: go('closeOthers') }, '-', { label: '左端に移動', fn: go('moveFirst') }, { label: '右端に移動', fn: go('moveLast') }, { label: '左に移動', fn: go('moveLeft') }, { label: '右に移動', fn: go('moveRight') }]);
 }
 function layMenu(x, y) {
   ctx.showMenu(x, y, [
