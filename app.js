@@ -97,10 +97,36 @@ async function openInExplorer(kind, p) {
   return launchExplorerApp(kind, p);
 }
 const isPhone = () => (navigator.maxTouchPoints > 0) && /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent); // 携帯か(パソコンのブラウザは、インテントが使えない)
+// パソコン(複数のモニター): エクスプローラーを、いちばん右のモニターに、そのモニターいっぱいの窓で出す。
+// モニターの位置は、ブラウザの許可(「すべてのディスプレイ上のウィンドウを管理」)が要る。最初にページを触ったとき、1回だけ聞く(押した直後に聞くと、窓を開く許可の時間が切れるため)
+let SCREENS = null;
+function rightScreenRect(list) { // list: [{left,top,width,height}](作業領域)。いちばん右(左端が最大)のもの
+  if (!list || !list.length) return null;
+  const s = list.reduce((m, x) => (x.left > m.left ? x : m), list[0]);
+  return { left: Math.round(s.left), top: Math.round(s.top), width: Math.round(s.width), height: Math.round(s.height) };
+}
+async function loadScreens() {
+  if (isPhone() || !screen.isExtended) { SCREENS = null; return; } // 携帯・モニターが1枚のときは使わない
+  try {
+    const d = await window.getScreenDetails();
+    const conv = () => d.screens.map(x => ({ left: x.availLeft, top: x.availTop, width: x.availWidth, height: x.availHeight }));
+    SCREENS = conv(); d.onscreenschange = () => { SCREENS = conv(); };
+  } catch { SCREENS = null; } // 許可されない・使えない: いまのモニターの右隣と見なす(launchExplorerApp)
+}
+if (!isPhone()) document.addEventListener('pointerdown', () => loadScreens(), { once: true });
+function popupRect() {
+  if (isPhone() || !screen.isExtended) return null;
+  return rightScreenRect(SCREENS) || { left: (screen.availLeft || 0) + screen.availWidth, top: screen.availTop || 0, width: screen.availWidth, height: screen.availHeight };
+}
 function launchExplorerApp(kind, p) {
+  const url = explorerUrl(kind, p), r = popupRect();
+  if (r) { // パソコンで、モニターが複数: 右のモニターに窓を開く。ブロックされたら、ふつうのリンクへ
+    const w = window.open(url, 'fb_explorer', 'popup=yes,left=' + r.left + ',top=' + r.top + ',width=' + r.width + ',height=' + r.height);
+    if (w) { try { w.focus(); } catch {} return true; }
+  }
   const a = document.createElement('a');
   if (isPhone() && PKG && PKG_RE.test(PKG)) a.href = intentUrl(kind, p, PKG);
-  else { a.href = explorerUrl(kind, p); a.target = '_blank'; a.rel = 'noopener'; }
+  else { a.href = url; a.target = '_blank'; a.rel = 'noopener'; }
   document.body.appendChild(a); a.click(); a.remove();
   return true;
 }
