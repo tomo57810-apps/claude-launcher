@@ -88,7 +88,15 @@ function intentUrl(kind, p, pkg) {
   const https = explorerUrl(kind, p), u = new URL(https);
   return 'intent://' + u.host + u.pathname + u.search + '#Intent;scheme=' + u.protocol.replace(':', '') + ';package=' + pkg + ';S.browser_fallback_url=' + encodeURIComponent(https) + ';end';
 }
-function openInExplorer(kind, p) {
+// まず、サーバー経由で、いま開いているエクスプローラーの窓(携帯)に、指示を送る。窓の配置(分割・ポップアップ)に関係なく届く。届いた窓が無ければ、アプリを起動する
+async function openInExplorer(kind, p) {
+  try {
+    const r = await api('POST', '/api/goto', { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: p, kind }) });
+    if (r.ok) { const j = await r.json().catch(() => null); if (j && j.delivered > 0) { toast(kind === 'dir' ? 'エクスプローラーで開きました' : 'エクスプローラーに送りました', 1500); return true; } }
+  } catch {}
+  return launchExplorerApp(kind, p);
+}
+function launchExplorerApp(kind, p) {
   const a = document.createElement('a');
   if (PKG && PKG_RE.test(PKG)) a.href = intentUrl(kind, p, PKG);
   else { a.href = explorerUrl(kind, p); a.target = '_blank'; a.rel = 'noopener'; }
@@ -107,6 +115,7 @@ function start() {
       go: async p => openInExplorer('dir', p), openFile: async p => openInExplorer('file', p),
       cwd: () => '/', selection: () => [],
       moreItems: () => [
+        { label: '📂 エクスプローラーのアプリを起動', fn: () => launchExplorerApp('dir', '/') },
         { label: '🔄 再読み込み', fn: () => location.reload() },
         { label: 'サーバー・ログインの設定', fn: () => showLogin('') },
         { label: 'ログアウト', fn: () => { TOKEN = ''; ls.del('lau_token'); showLogin('ログアウトしました'); } },
