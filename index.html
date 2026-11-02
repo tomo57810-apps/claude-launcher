@@ -32,7 +32,10 @@ html, body { margin: 0; height: 100%; font-family: "Yu Gothic UI", "Meiryo UI", 
 .sa-dlg button { height: 38px; padding: 0 16px; border: 1px solid #c8c8c8; border-radius: 8px; background: #f3f3f3; font: inherit; }
 .sa-dlg button.primary { background: #0067c0; border-color: #0067c0; color: #fff; }
 .sa-dlg button.danger { background: #c62828; border-color: #c62828; color: #fff; }
-.sa-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 500; background: rgba(30,30,30,.92); color: #fff; padding: 9px 16px; border-radius: 18px; font-size: 13px; max-width: 88vw; }
+.sa-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 500; background: rgba(30,30,30,.92); color: #fff; padding: 9px 16px; border-radius: 18px; font-size: 13px; max-width: 88vw; pointer-events: none; }
+/* Chrome の「タップして検索」(Google の検索結果の帯)が、札・タイルの文字に反応しないよう、文字を選べなくする(入力欄は除く) */
+body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, textarea { -webkit-user-select: text; user-select: text; }
 </style>
 </head>
 <body>
